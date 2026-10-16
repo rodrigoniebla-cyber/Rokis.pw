@@ -63,8 +63,8 @@ rm -f "$ROOT/out/.info.plist"
 # a fork left behind by a release is named for the version it really is.
 MOD_VERSION="$(cat "$ROOT/version.txt" 2>/dev/null || true)"
 : "${MOD_VERSION:=0.0.0}"
-OUT="${OUT:-$ROOT/out/spoti.pw-$MOD_VERSION.ipa}"
-echo "==> spoti.pw $MOD_VERSION on Spotify $SPOTIFY_VERSION -> $OUT"
+OUT="${OUT:-$ROOT/out/rokis.pw-$MOD_VERSION.ipa}"
+echo "==> rokis.pw $MOD_VERSION on Spotify $SPOTIFY_VERSION -> $OUT"
 
 # What CarPlay looks for, as it stands in an IPA: the app's CarPlay entitlements, which a signing tool
 # keeps only where the profile allows them, and the CarPlay scene its Info.plist declares. Printed so a

@@ -2,9 +2,9 @@
   <img src="docs/icon.png" width="96" alt="">
 </p>
 
-<h1 align="center">spoti.pw</h1>
+<h1 align="center">rokis.pw</h1>
 
-<p align="center">Spotify, in glass.</p>
+<p align="center">Spotify, in glass. A personal build of <a href="https://github.com/skopevoj/spoti.pw">spoti.pw</a> by Vojtěch Škopek, under its PolyForm Strict license.</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/iOS-000000?style=for-the-badge&logo=ios&logoColor=white" alt="iOS">
@@ -49,7 +49,7 @@ all. Both looks live in Settings → Mod Settings.
 ## Build it
 
 No IPA is distributed. Bring a decrypted **Spotify 9.1.78** IPA; you get an unsigned
-`spoti.pw-<mod version>.ipa` to sign with SideStore, Feather or any certificate signer. Each
+`rokis.pw-<mod version>.ipa` to sign with SideStore, Feather or any certificate signer. Each
 [release](https://github.com/skopevoj/spoti.pw/releases) also carries the tweak's `.deb`.
 
 ### Build with GitHub Actions
@@ -68,7 +68,7 @@ alone builds too, but without the Live Activity. Then:
 
 Put the decrypted `.ipa` in `ipa/`, then:
 
-    make release    # out/spoti.pw-<version>.ipa, ready to sign
+    make release    # out/rokis.pw-<version>.ipa, ready to sign
     make install    # the same, signed with your certificate and pushed over USB
 
 `make install` reads `SIGN_P12`, `SIGN_PROFILE` and `SIGN_P12_PASSWORD` from `.signing.env`; copy

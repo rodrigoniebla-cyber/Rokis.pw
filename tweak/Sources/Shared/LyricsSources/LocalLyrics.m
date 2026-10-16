@@ -1,5 +1,5 @@
 // A local file's lyrics (LyricsSources.h): Spotify has none for it and no source knows it by Spotify's
-// id, so they come from what the user typed in for it (Documents/spoti.pw/Local lyrics/<id>.lrc, LRC or
+// id, so they come from what the user typed in for it (Documents/rokis.pw/Local lyrics/<id>.lrc, LRC or
 // plain lines), and failing that from LRCLIB by the title, the artist and the length the file's
 // spotify:local:artist:album:title:seconds URI carries. Either way they are kept as any track's are, so
 // the redesign's lyrics, the lock screen and the Live Activity show them.
@@ -11,8 +11,7 @@
 static NSMutableSet<NSString *> *sg_asked;
 
 static NSURL *fileFor(NSString *localID) {
-    NSURL *documents = [NSFileManager.defaultManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask].firstObject;
-    return [[documents URLByAppendingPathComponent:@"spoti.pw/Local lyrics" isDirectory:YES]
+    return [[[NSURL fileURLWithPath:SGDocumentsFolder() isDirectory:YES] URLByAppendingPathComponent:@"Local lyrics" isDirectory:YES]
             URLByAppendingPathComponent:[localID stringByAppendingPathExtension:@"lrc"]];
 }
 

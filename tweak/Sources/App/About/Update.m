@@ -10,7 +10,7 @@
 #import "About.h"
 
 NSString *const SGUpdateURL = @"https://spoti.pw/api/update";
-static NSString *const kGitHubURL = @"https://api.github.com/repos/rodrigoniebla-cyber/spoti.pw/releases?per_page=100";
+static NSString *const kGitHubURL = @"https://api.github.com/repos/rodrigoniebla-cyber/rokis.pw/releases?per_page=100";
 NSString *const SGUpdateCheckedNotification = @"spotifyglass.update.checked.notification";
 
 static NSString *const kChecked = @"spotifyglass.update.checked";

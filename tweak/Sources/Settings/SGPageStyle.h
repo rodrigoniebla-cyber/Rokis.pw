@@ -37,6 +37,7 @@ UITableViewCell *SGDequeueCell(UITableView *table, NSString *identifier);
 void SGOpenURL(NSString *url);
 extern NSString *const SGSiteURL;
 extern NSString *const SGRepoURL;
+extern NSString *const SGUpstreamRepoURL;   // spoti.pw, which rokis.pw is built on
 extern NSString *const SGDiscordURL;
 // The one Spotify build the mod is made for (AGENTS.md lists what else follows it on a bump).
 extern NSString *const SGSupportedSpotifyVersion;

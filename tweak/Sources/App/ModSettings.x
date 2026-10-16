@@ -100,7 +100,7 @@ static UIViewController *modSettingsPage(void) {
             mod,
         ]),
     ]];
-    return [[SGModPage alloc] initWithTitle:@"spoti.pw" intro:nil sections:sections footer:nil];
+    return [[SGModPage alloc] initWithTitle:@"rokis.pw" intro:nil sections:sections footer:nil];
 }
 
 #pragma mark - row in the settings list and the side drawer

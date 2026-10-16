@@ -1,4 +1,6 @@
-# spoti.pw
+# rokis.pw
+
+A personal build of spoti.pw (https://github.com/skopevoj/spoti.pw); its license and copyright notice stay as they are.
 
 A Theos tweak (Objective-C + Logos) injected into the decrypted Spotify iOS app. The full guide is
 `docs/tweaks.md`; read it before changing code.

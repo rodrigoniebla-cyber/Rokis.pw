@@ -30,7 +30,8 @@ static NSString *const kZlib =
     @"3. This notice may not be removed or altered from any source distribution.";
 
 UIViewController *SGLicensesPage(void) {
-    SGModRow *mod = SGLinkRow(@"spoti.pw", @"PolyForm Strict License 1.0.0", [SGRepoURL stringByAppendingString:@"/blob/main/LICENSE"]);
+    SGModRow *mod = SGLinkRow(@"rokis.pw", @"Built on spoti.pw · PolyForm Strict License 1.0.0", [SGRepoURL stringByAppendingString:@"/blob/main/LICENSE"]);
+    SGModRow *upstream = SGLinkRow(@"spoti.pw", @"Copyright Vojtěch Škopek", SGUpstreamRepoURL);
     SGModRow *bs2b = SGLinkRow(@"libbs2b", @"Crossfeed · MIT License", @"https://github.com/alexmarsev/libbs2b");
     SGModRow *wdl = SGLinkRow(@"WDL", @"Liveprog's EEL2 · zlib License", @"https://github.com/justinfrankel/WDL");
     SGModRow *symbols = SGLinkRow(@"SFSymbols", @"The tab icons' names · MIT License", @"https://github.com/Rspoon3/SFSymbols");
@@ -38,7 +39,7 @@ UIViewController *SGLicensesPage(void) {
     SGModRow *noise = SGLinkRow(@"webgl-noise", @"Fluid artwork's simplex noise · MIT License", @"https://github.com/ashima/webgl-noise");
     SGModRow *hash = SGLinkRow(@"Hash without Sine", @"Fluid artwork's dither · MIT License", @"https://www.shadertoy.com/view/4djSRW");
     return [[SGModPage alloc] initWithTitle:@"Licenses" intro:@"The mod's own license, and the code from others it includes." sections:@[
-        SGSection(nil, @[mod]),
+        SGSection(nil, @[mod, upstream]),
         SGNotedSection(nil, @[bs2b], [@"Copyright (c) 2005 Boris Mikhaylov\n\n" stringByAppendingString:kMIT]),
         SGNotedSection(nil, @[wdl], [@"Copyright (C) 2004-2013 Cockos Incorporated\nCopyright (C) 1999-2003 Nullsoft, Inc.\n\n"
                                      stringByAppendingString:kZlib]),
