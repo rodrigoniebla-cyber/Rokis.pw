@@ -270,6 +270,9 @@ Shared:
                   declares MusicHapticsSupported, each track's ISRC is asked of Spotify's Web API with the app's own
                   token and added to the now playing info, so iOS plays its own haptic track in the background and
                   on the lock screen; while MAMusicHapticsManager says it has one for the song, the mod's steps aside.
+                  When iOS has no haptic track under Spotify's code, the same song's other releases (same title before
+                  any " - " or bracket, same first artist, within 3 s of the length) are searched for on Spotify and
+                  their codes asked of iOS in turn, up to eight; the first it has is sent and kept on the phone per track.
                   The lookup is tried again while the song plays when Spotify's token is not there yet or it fails, and
                   the Vibrations page's Now row says what iOS's is doing for the song. iOS plays no haptics of an app's
                   own in the background, so out of the app iOS's is the only one there is
