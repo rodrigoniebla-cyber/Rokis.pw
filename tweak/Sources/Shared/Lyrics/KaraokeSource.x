@@ -162,6 +162,14 @@ NSString *SGKaraokeSpotifyAuthorization(void) {
     return sg_spclientHeaders[@"authorization"];
 }
 
+NSDictionary<NSString *, NSString *> *SGKaraokeSpotifyHeaders(void) {
+    return sg_spclientHeaders;
+}
+
+BOOL SGKaraokeRunning(void) {
+    return sg_lyrics != nil;
+}
+
 // `retry`: the sources' walk failed on the way, so an answer with no lines is not final either.
 static BOOL requestFromSpotify(NSString *trackID, BOOL retry) {
     NSDictionary<NSString *, NSString *> *headers = sg_spclientHeaders;

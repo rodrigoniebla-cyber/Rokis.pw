@@ -89,8 +89,11 @@ Shared:
                   times (KaraokeTiming.m), which line to name where two voices sing at once (the one that came in first,
                   for the lock screen and the Live Activity), and the Lyrics page's parts; every song's lines, once
                   they load, are saved on the phone (LyricsOffline.m, Lyrics > Save lyrics offline, on until switched
-                  off, at most 3000 songs, the least read going first) and read back before any source is asked, so
-                  they show at once and without a connection
+                  off, at most 20000 songs, the least read going first) and read back before any source is asked, so
+                  they show at once and without a connection. Lyrics > Download all lyrics (LyricsDownload.m) saves a
+                  whole library's at once without playing it: Liked Songs, and the library's playlists if asked, listed
+                  from the Web API with the app's own sign-in, each song not saved yet named for the sources
+                  (SGLyricsNameTrack) and asked as a song that plays is, one at a time, paused while the app is away
     LyricsSources/ the sources lyrics come from, asked in the order the Lyrics page puts them in and merged into the
                   best answer (LyricsSources.m, the list to drag in LyricsSourcesPage.m): Apple Music's TTML from
                   BiniLyrics.m and Unison.m, read by SGTTML.m, which carries a second voice and the

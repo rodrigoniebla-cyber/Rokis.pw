@@ -93,6 +93,10 @@ BOOL SGLyricsEeveeReplaces(void);
 // A source is on and EeveeSpotify is not replacing lyrics; what the hooks go by, read once at launch.
 BOOL SGLyricsActive(void);
 
+// Names a track the player has not played, for the sources that search by name: the library download
+// (Shared/Lyrics/LyricsDownload.m) knows every song's title, artist, album and length from the Web API.
+// Main queue.
+void SGLyricsNameTrack(NSString *trackID, NSString *title, NSString *artist, NSString *album, NSInteger seconds);
 // Asks the sources in order and merges what they give, on the main queue. nil when none had lyrics.
 void SGLyricsFetch(NSString *trackID, void (^done)(SGLyricsResult *result));
 // NO once every source has said it has nothing for the track; safe from any thread.

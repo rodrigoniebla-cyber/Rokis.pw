@@ -265,10 +265,35 @@ BOOL SGLyricsActive(void) {
 // request often lands a beat before the player moves on to its track, and comparing then left the
 // query nameless. A track the player has not reported starts with nothing, and the first source
 // that matches by id fills the rest in.
+// Tracks named by someone other than the player (SGLyricsNameTrack), emptied when full. Main queue.
+static NSMutableDictionary<NSString *, SGLyricsQuery *> *sg_named;
+static const NSUInteger kNamedTracks = 400;
+
+void SGLyricsNameTrack(NSString *trackID, NSString *title, NSString *artist, NSString *album, NSInteger seconds) {
+    if (!trackID.length || !title.length) return;
+    if (!sg_named) sg_named = [NSMutableDictionary dictionary];
+    if (sg_named.count >= kNamedTracks) [sg_named removeAllObjects];
+    SGLyricsQuery *query = [SGLyricsQuery new];
+    query.trackID = trackID;
+    query.title = title;
+    query.artist = artist;
+    query.album = album;
+    query.seconds = seconds;
+    sg_named[trackID] = query;
+}
+
 static SGLyricsQuery *queryFor(NSString *trackID) {
     SGLyricsQuery *query = [SGLyricsQuery new];
     query.trackID = trackID;
     SPTPlayerTrack *track = SGKaraokeTrackFor(trackID);
+    SGLyricsQuery *given = track ? nil : sg_named[trackID];
+    if (given) {
+        query.title = given.title;
+        query.artist = given.artist;
+        query.album = given.album;
+        query.seconds = given.seconds;
+        return query;
+    }
     if (!track) return query;
     query.title = track.trackTitle;
     query.artist = track.artistName;

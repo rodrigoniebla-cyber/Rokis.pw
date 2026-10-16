@@ -3,14 +3,15 @@
 // out of the iCloud backup, with the source's credit. KaraokeSource.x reads a saved song's lines from
 // there before asking anyone, so they show at once and without a connection, and writes a song's lines
 // again whenever they change (a translation added, Spotify's better timed ones). Local files keep their
-// own (Shared/LyricsSources/LocalLyrics.m). The oldest go once there are more than kMostSongs.
+// own (Shared/LyricsSources/LocalLyrics.m). The oldest go once there are more than kMostSongs, enough for a
+// whole library downloaded at once (LyricsDownload.m) at a few kilobytes a song.
 #import "Core/SGCore.h"
 #import "Settings/SGModPage.h"
 #import "Settings/SGPageStyle.h"
 #import "Lyrics.h"
 #import "Shared/LyricsSources/LyricsSources.h"
 
-static const NSUInteger kMostSongs = 3000, kKeptAfterPrune = 2500;
+static const NSUInteger kMostSongs = 20000, kKeptAfterPrune = 18000;
 
 static NSURL *folder(void) {
     static NSURL *url;
@@ -134,31 +135,35 @@ static void prune(void) {
     for (NSUInteger i = 0; i + kKeptAfterPrune < oldestFirst.count; i++) [NSFileManager.defaultManager removeItemAtURL:oldestFirst[i] error:nil];
 }
 
-// Main queue: the lines are the engine's, and their credit is set just after they are kept.
-void SGLyricsOfflineSave(NSString *trackID, NSArray<SGKaraokeLine *> *lines) {
+void SGLyricsOfflineStore(NSString *trackID, NSArray<SGKaraokeLine *> *lines, NSString *credit) {
     NSURL *file = fileFor(trackID);
     if (!file || !lines.count || !SGLyricsOfflineEnabled()) return;
+    NSMutableArray *json = [NSMutableArray arrayWithCapacity:lines.count];
+    for (SGKaraokeLine *line in lines) [json addObject:lineToJSON(line)];
+    NSMutableDictionary *saved = [@{@"v": @1, @"lines": json} mutableCopy];
+    if (credit.length) saved[@"credit"] = credit;
+    NSData *data = [NSJSONSerialization dataWithJSONObject:saved options:0 error:NULL];
+    if (!data) return;
+    dispatch_async(disk(), ^{
+        static NSUInteger writes;
+        NSURL *base = folder();
+        if (![NSFileManager.defaultManager fileExistsAtPath:base.path]) {
+            [NSFileManager.defaultManager createDirectoryAtURL:base withIntermediateDirectories:YES attributes:nil error:nil];
+            NSURL *excluded = base;
+            [excluded setResourceValue:@YES forKey:NSURLIsExcludedFromBackupKey error:nil];
+        }
+        [data writeToURL:file options:NSDataWritingAtomic error:nil];
+        if (++writes % 50 == 1) prune();
+    });
+}
+
+// Main queue: the lines are the engine's, and their credit is set just after they are kept.
+void SGLyricsOfflineSave(NSString *trackID, NSArray<SGKaraokeLine *> *lines) {
+    if (!fileFor(trackID) || !lines.count || !SGLyricsOfflineEnabled()) return;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         // Kept again since with other lines: those are saved by their own call.
         if (SGKaraokeLinesForTrack(trackID) != lines) return;
-        NSMutableArray *json = [NSMutableArray arrayWithCapacity:lines.count];
-        for (SGKaraokeLine *line in lines) [json addObject:lineToJSON(line)];
-        NSMutableDictionary *saved = [@{@"v": @1, @"lines": json} mutableCopy];
-        NSString *credit = SGLyricsCreditFor(trackID).text;
-        if (credit.length) saved[@"credit"] = credit;
-        NSData *data = [NSJSONSerialization dataWithJSONObject:saved options:0 error:NULL];
-        if (!data) return;
-        dispatch_async(disk(), ^{
-            static NSUInteger writes;
-            NSURL *base = folder();
-            if (![NSFileManager.defaultManager fileExistsAtPath:base.path]) {
-                [NSFileManager.defaultManager createDirectoryAtURL:base withIntermediateDirectories:YES attributes:nil error:nil];
-                NSURL *excluded = base;
-                [excluded setResourceValue:@YES forKey:NSURLIsExcludedFromBackupKey error:nil];
-            }
-            [data writeToURL:file options:NSDataWritingAtomic error:nil];
-            if (++writes % 50 == 1) prune();
-        });
+        SGLyricsOfflineStore(trackID, lines, SGLyricsCreditFor(trackID).text);
     });
 }
 
@@ -195,5 +200,32 @@ NSArray<SGModRow *> *SGLyricsOfflineRows(void) {
         }]];
         [SGTopController() presentViewController:alert animated:YES completion:nil];
     });
-    return @[save, saved];
+    // Every song of the library at once: Liked Songs, or those and the playlists; tapped again, it stops.
+    SGModRow *download = SGStatActionRow(@"Download all lyrics", @"Liked Songs and playlists, without playing them", ^NSString *{
+        return SGLyricsDownloadStatus();
+    }, ^{
+        if (SGLyricsDownloadRunning()) {
+            SGLyricsDownloadStop();
+            return;
+        }
+        UIAlertController *sheet = [UIAlertController alertControllerWithTitle:@"Download all lyrics"
+            message:@"Every song's lyrics are saved on this iPhone, one song at a time, while Spotify is open. It can take a while "
+                     "for a big library; songs already saved are skipped." preferredStyle:UIAlertControllerStyleActionSheet];
+        [sheet addAction:[UIAlertAction actionWithTitle:@"Liked Songs" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+            SGLyricsDownloadStart(SGLyricsDownloadLiked);
+        }]];
+        [sheet addAction:[UIAlertAction actionWithTitle:@"Liked Songs and playlists" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+            SGLyricsDownloadStart(SGLyricsDownloadLikedAndPlaylists);
+        }]];
+        [sheet addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+        UIViewController *top = SGTopController();
+        sheet.popoverPresentationController.sourceView = top.view;
+        sheet.popoverPresentationController.sourceRect = CGRectMake(CGRectGetMidX(top.view.bounds), CGRectGetMidY(top.view.bounds), 1, 1);
+        [top presentViewController:sheet animated:YES completion:nil];
+    });
+    download.symbol = @"arrow.down.circle";
+    download.progress = ^double { return SGLyricsDownloadProgress(); };
+    download.refreshOn = SGLyricsDownloadDidChangeNotification;
+    saved.refreshOn = SGLyricsDownloadDidChangeNotification;
+    return @[save, download, saved];
 }
