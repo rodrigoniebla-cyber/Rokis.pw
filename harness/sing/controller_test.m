@@ -39,6 +39,10 @@ SPTPlayerState *SGPlayerState(void) { return player; }
 double SGSingSourcePosition(SPTPlayerState *state) { return 10; }
 double SGPlayerAudioLatency(void) { return 0; }
 double SGPlayerSpeed(void) { return 1; }
+BOOL SGFlag(NSString *key, BOOL fallback) { return fallback; }
+// Follow the lyrics stays off here; harness/sing/guide_test.c tests it.
+void SGSingGuideApplySwitch(void) {}
+void SGSingGuideFollow(NSString *track, NSString *next) {}
 NSNotificationName const SGSingModelDidChangeNotification = @"test.singModelChanged";
 static NSString *modelPath = @"fixture";
 NSString *SGSingModelPath(void) { return modelPath; }

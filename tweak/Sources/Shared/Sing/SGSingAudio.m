@@ -1,5 +1,6 @@
 #include "SGSingAudio.h"
 #include "Shared/Audio/SGAudioPipeline.h"
+#include <pthread.h>
 #include <stdlib.h>
 #include <stdatomic.h>
 #include <string.h>
@@ -20,6 +21,11 @@ struct SGSingAudio {
     struct { uint64_t track, frame; } markers[kMarkers];
     atomic_uint markerHead, markerTail;
     SGSingStream *stream;
+    // The worker's map of source frames to songs: where each of the last two songs starts in the source,
+    // and at what position in it. Main writes it, the worker reads it, the render thread never touches it.
+    pthread_mutex_t songsLock;
+    struct { uint64_t frame, track; double position; } songs[2];
+    unsigned songCount;
     const AudioTimeStamp *time; // borrowed only within the current render call
     float planar[2][SGSingStreamMaximumRenderFrames];
     float mixed[2 * SGSingStreamMaximumRenderFrames];
@@ -95,8 +101,9 @@ SGSingAudio *SGSingAudioCreate(SGAudioStamp origin, uint32_t window, uint32_t ho
     if (!a) return NULL;
     a->epoch = atomic_fetch_add(&epoch, 1) + 1; a->origin = origin.sourceFrame;
     a->lastBoundary = UINT64_MAX;
+    pthread_mutex_init(&a->songsLock, NULL);
     a->stream = SGSingStreamCreate(origin, window, hop, level);
-    if (!a->stream) { free(a); return NULL; }
+    if (!a->stream) { pthread_mutex_destroy(&a->songsLock); free(a); return NULL; }
     return a;
 }
 SGSingStream *SGSingAudioStream(SGSingAudio *a) { return a ? a->stream : NULL; }
@@ -115,12 +122,32 @@ void SGSingAudioDetach(SGSingAudio *a) {
 }
 void SGSingAudioDestroy(SGSingAudio *a) {
     if (!a) return;
-    SGSingStreamDestroy(a->stream); free(a);
+    SGSingStreamDestroy(a->stream);
+    pthread_mutex_destroy(&a->songsLock);
+    free(a);
 }
 
 void SGSingAudioInvalidate(void) { atomic_fetch_add(&epoch, 1); }
 void SGSingAudioSetClock(SGSingAudio *a, double position, uint64_t track) {
     a->position = fmax(0, position); a->track = track;
+    pthread_mutex_lock(&a->songsLock);
+    a->songs[0].frame = a->origin; a->songs[0].track = track; a->songs[0].position = a->position;
+    a->songCount = 1;
+    pthread_mutex_unlock(&a->songsLock);
+}
+bool SGSingAudioSourceTime(SGSingAudio *a, uint64_t frame, uint64_t *track, double *seconds) {
+    if (!a) return false;
+    bool found = false;
+    pthread_mutex_lock(&a->songsLock);
+    for (unsigned n = a->songCount; n > 0; n--) {
+        if (frame < a->songs[n - 1].frame) continue;
+        *track = a->songs[n - 1].track;
+        *seconds = a->songs[n - 1].position + (frame - a->songs[n - 1].frame) / (double)SGSingSampleRate;
+        found = true;
+        break;
+    }
+    pthread_mutex_unlock(&a->songsLock);
+    return found;
 }
 void SGSingAudioExpectTrack(SGSingAudio *a, uint64_t track) {
     atomic_store(&a->expectedTrack, track);
@@ -135,6 +162,12 @@ bool SGSingAudioContinueTrack(SGSingAudio *a, uint64_t track) {
     a->markers[head % kMarkers].track = track;
     a->markers[head % kMarkers].frame = frame;
     atomic_store_explicit(&a->markerHead, head + 1, memory_order_release);
+    pthread_mutex_lock(&a->songsLock);
+    if (a->songCount == 2) a->songs[0] = a->songs[1];
+    unsigned at = a->songCount ? 1 : 0;
+    a->songs[at].frame = frame; a->songs[at].track = track; a->songs[at].position = 0;
+    a->songCount = at + 1;
+    pthread_mutex_unlock(&a->songsLock);
     atomic_store(&a->expectedTrack, 0);
     atomic_store(&a->prefetchedTrack, 0);
     return true;

@@ -175,6 +175,13 @@ Shared:
                   background URL session, checks each against a size and a SHA-256 pinned in the code, and moves
                   them into Application Support/spoti.pw/Sing only when all are right (SingModel.x reconnects at
                   launch). Tested against harness/sing/ (the download against a local server, model_test.py)
+                  Follow the lyrics (SGSingGuide.m, plain C; SGSingLyricsGuide.m hands it the lines and keeps what it
+                  learns; SGKeySingLyricsGuide, off until switched on): each hop of vocals the worker writes is gated by
+                  the song's timed lines (writePCM, timed through SGSingAudioSourceTime's map of source frames to songs),
+                  so the vocals stay in the mix outside the lines. It lines the lyrics up with the separated voice
+                  (Pearson's r of the voice's 50 ms level against "in a line", for shifts of up to 1.5 s either way,
+                  after 20 s of singing), and lets go of a song whose singing falls more than 30 % outside the lines.
+                  Per song, in spotifyglass.sing.lyricsGuide.songs (2,000 at most). harness/sing/guide_test.c
                   Spatial voice (SGSpatialVoice.m, its switch on the Karaoke page): with head tracking AirPods the
                   separated vocals are panned against the head's turn in SGSingDSP's mixer -- constant power, the far
                   ear up to 0.66 ms later and shadowed -- so the voice stays in front while the instrumental stays

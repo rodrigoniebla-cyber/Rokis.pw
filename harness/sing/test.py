@@ -26,3 +26,8 @@ subprocess.run([os.environ.get("CC", "clang"), "-x", "c", "-std=c11", "-Wall", "
                 str(src / "Shared/Sing/SGSingDSP.m"), str(src / "Shared/Sing/SGSingTimeline.m"),
                 str(src / "Shared/Sing/SGSingStream.m"), "-o", str(out / "stream-test")], check=True)
 subprocess.run([str(out / "stream-test")], check=True)
+subprocess.run([os.environ.get("CC", "clang"), "-x", "c", "-std=c11", "-Wall", "-Wextra",
+                "-Werror", "-pthread", "-fsanitize=" + sanitizer, "-g", "-O1", "-I", str(src),
+                str(here / "guide_test.c"), str(src / "Shared/Sing/SGSingGuide.m"),
+                "-lm", "-o", str(out / "guide-test")], check=True)
+subprocess.run([str(out / "guide-test")], check=True)

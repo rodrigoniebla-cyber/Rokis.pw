@@ -2,6 +2,8 @@
 #import "SGSingController.h"
 #import "SGSingAudio.h"
 #import "SGSingFormat.h"
+#import "SGSingGuide.h"
+#import "SGSingLyricsGuide.h"
 #import "SGSingModel.h"
 #import "SGStemWorker.h"
 #import "Shared/Audio/SGAudioPipeline.h"
@@ -43,11 +45,14 @@ static double downstreamLatency(void) {
 @property (nonatomic) CFTimeInterval attachDeadline;
 @property (nonatomic) NSString *track;
 @property (nonatomic) NSString *nextTrack;
+// Follow the lyrics' copy of each hop of vocals, gated by the lyrics (SGSingGuide.h); the worker's alone.
+@property (nonatomic) float *guided;
 @end
 @implementation SGSingSession
 - (void)dealloc {
     NSCAssert(!_attached && _finished, @"Sing endpoints must stop before releasing their storage");
     SGSingAudioDestroy(_audio);
+    free(_guided);
 }
 @end
 
@@ -99,8 +104,16 @@ static int32_t readPCM(void *context, float *pcm, uint64_t *metadata) {
 }
 static int32_t writePCM(void *context, const float *pcm, uint32_t frames, uint64_t generation,
                         uint64_t track, uint64_t frame, uint32_t format) {
-    SGSingStream *s = stream((__bridge SGSingSession *)context);
+    SGSingSession *session = (__bridge SGSingSession *)context;
+    SGSingStream *s = stream(session);
     if (SGSingStreamWorkerState(s) < 0) return 0;
+    // Follow the lyrics: the vocals stay in the mix where the lyrics say nobody sings.
+    uint64_t song; double seconds;
+    if (pcm && session.guided && frames <= SGSingHopFrames && SGSingGuideEnabled() &&
+        SGSingAudioSourceTime(session.audio, frame, &song, &seconds)) {
+        SGSingGuideProcess(song, seconds, pcm, session.guided, frames);
+        pcm = session.guided;
+    }
     return SGSingStreamWriteVocals(s, (SGAudioStamp){generation, track, frame, format, frames}, pcm) ? 1 : -1;
 }
 static void workerStatus(void *context, int32_t status) {
@@ -117,6 +130,7 @@ static void workerStatus(void *context, int32_t status) {
     // Without the downloaded voice model Sing runs on the built-in separator; Mod Settings > Karaoke gets the better one.
     _model = SGSingModelPath();
     _state = _model ? SGSingIdle : SGSingUnavailable;
+    SGSingGuideApplySwitch();
     SGAddPlayerStateObserver(self);
     NSNotificationCenter *nc = NSNotificationCenter.defaultCenter;
     [nc addObserver:self selector:@selector(modelChanged:) name:SGSingModelDidChangeNotification object:nil];
@@ -199,6 +213,7 @@ static void workerStatus(void *context, int32_t status) {
                                       SGSingWindowFrames, SGSingHopFrames, _level);
     if (!session.audio) { _blockedTrack = session.track; [self publish:SGSingFailed explanation:@"There is not enough memory to start Sing."]; return; }
     SGSingStreamSetModelReady(stream(session), false);
+    session.guided = malloc((size_t)SGSingHopFrames * 2 * sizeof(float));
     _session = session;
     [self prepareNextTrack:state];
     session.finished = NO;
@@ -318,6 +333,7 @@ static void workerStatus(void *context, int32_t status) {
                 SGLog(@"Sing continuing a prepared repeat of the current track");
             }
             SGSingAudioSetLatency(session.audio, downstreamLatency());
+            SGSingGuideFollow(session.track, session.nextTrack);
             if (CACurrentMediaTime() - _lastClockPublication >= kClockPublication) {
                 _lastClockPublication = CACurrentMediaTime();
                 [self prepareNextTrack:state];

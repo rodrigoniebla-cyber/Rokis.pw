@@ -15,7 +15,7 @@ command = ["xcrun", "--sdk", "iphonesimulator", "clang", "-target", "arm64-apple
            "-fobjc-arc", "-g", "-O1", "-Wall", "-Werror", "-Wno-deprecated-declarations", "-I", str(src),
            str(here / "controller_test.m")]
 command += [str(src / "Shared/Sing" / name) for name in
-            ["SGSingAudio.m", "SGSingStream.m", "SGSingTimeline.m", "SGSingDSP.m"]]
+            ["SGSingAudio.m", "SGSingStream.m", "SGSingTimeline.m", "SGSingDSP.m", "SGSingGuide.m"]]
 command += [str(src / "Shared/Audio/SGAudioRingBuffer.m")]
 for framework in ["Foundation", "UIKit", "QuartzCore", "AVFoundation", "MediaPlayer", "AudioToolbox"]:
     command += ["-framework", framework]
