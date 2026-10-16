@@ -8,6 +8,7 @@
 #import "Settings/SGModPage.h"
 #import "Settings/SGPageStyle.h"
 #import "Shared/Sing/SGSingController.h"
+#import "Shared/Sing/SGSingLyricsGuide.h"
 #import "Shared/Sing/SGSingModel.h"
 #import "Shared/Sing/SGSpatialVoice.h"
 #import "Sing.h"
@@ -22,7 +23,9 @@ static NSString *footer(void) {
             "It needs iOS 18 or later and works as it is, on a separator built into the app that turns down what sits in the "
             "middle of the mix. The voice model, %@, is a cleaner one, downloaded once, and, like the built-in one, runs only "
             "on this iPhone. Sing stops when your iPhone gets hot, unless Ignore temperature is on: then it keeps going, and "
-            "your iPhone may get hotter and slow itself down. The switches and the download apply straight away.", aboutSize()];
+            "your iPhone may get hotter and slow itself down. With Follow the lyrics, the vocals are taken out only where the song's timed "
+            "lyrics say someone sings, so intros, breaks and solos keep everything; it lines each song's lyrics up with the voice it hears "
+            "and remembers it for the next play. The switches and the download apply straight away.", aboutSize()];
 }
 
 static void tell(NSString *title, NSString *message) {
@@ -102,6 +105,18 @@ static void confirmRemove(void) {
     [SGTopController() presentViewController:alert animated:YES completion:nil];
 }
 
+static void confirmForget(void) {
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Forget learned songs?"
+        message:[NSString stringWithFormat:@"Sing forgets how the lyrics of %lu songs line up with their voices and learns each one again as it plays.",
+                 (unsigned long)SGSingGuideLearnedCount()]
+        preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+    [alert addAction:[UIAlertAction actionWithTitle:@"Forget" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) {
+        SGSingGuideForget();
+    }]];
+    [SGTopController() presentViewController:alert animated:YES completion:nil];
+}
+
 // Below iOS 18 the switch is a row saying what is missing.
 static SGModRow *unavailableRow(void) {
     return SGStatActionRow(@"Sing", nil, ^NSString *{ return @"Needs iOS 18"; }, ^{
@@ -138,7 +153,21 @@ static SGModSection *karaokeSection(void) {
     SGModRow *heat = SGWaitsOn(SGOptionRow(@"Ignore temperature", @"Keeps singing when your iPhone runs hot", SGKeySingIgnoreHeat),
                                SGRKeySing, NO);
     heat.changed = ^(BOOL on) { SGSingHeatSettingChanged(); };
-    return SGNotedSection(@"Karaoke", @[sing, heat, model, download, cancel, remove], footer());
+    SGModRow *guide = SGWaitsOn(SGOptionRow(@"Follow the lyrics", @"Takes the vocals out only where the lyrics are sung", SGKeySingLyricsGuide),
+                                SGRKeySing, NO);
+    guide.changed = ^(BOOL on) { SGSingGuideApplySwitch(); };
+    BOOL (^following)(void) = ^BOOL { return SGFlag(SGRKeySing, NO) && SGFlag(SGKeySingLyricsGuide, NO); };
+    SGModRow *song = SGStatActionRow(@"This song", nil, ^NSString *{ return SGSingGuideStatus(); }, ^{
+        tell(@"Follow the lyrics", SGSingGuideExplanation());
+    });
+    song.visible = following;
+    song.refreshOn = SGSingGuideDidChangeNotification;
+    SGModRow *learned = SGStatActionRow(@"Songs learned", nil, ^NSString *{
+        return [NSString stringWithFormat:@"%lu", (unsigned long)SGSingGuideLearnedCount()];
+    }, ^{ confirmForget(); });
+    learned.visible = ^BOOL { return following() && SGSingGuideLearnedCount() > 0; };
+    learned.refreshOn = SGSingGuideDidChangeNotification;
+    return SGNotedSection(@"Karaoke", @[sing, heat, guide, song, learned, model, download, cancel, remove], footer());
 }
 
 // Spatial voice: the voice kept in front with head tracking AirPods, applying at once.

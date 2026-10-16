@@ -21,3 +21,6 @@ bool SGSingAudioAwaitingTrack(SGSingAudio *audio, uint64_t track);
 // Total downstream delay in source seconds, updated off-render when the route/rate changes.
 void SGSingAudioSetLatency(SGSingAudio *audio, double seconds);
 bool SGSingAudioClock(uint64_t track, double *position);
+// Which song a source frame belongs to and how far into it it is, for the worker (never the render thread):
+// from the clock set at attach, and the boundary of a next song continued into. False before the clock.
+bool SGSingAudioSourceTime(SGSingAudio *audio, uint64_t frame, uint64_t *track, double *seconds);
