@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds the Live Activity widget extension without an Xcode project, and the App Intents metadata
+# Builds the Live Activity and home screen widget extension without an Xcode project, and the App Intents metadata
 # the host app needs for the widget's taps.
 #
 #   scripts/build-extension.sh <host Info.plist> <out dir>
@@ -18,6 +18,8 @@ SHARED="$ROOT/tweak/Sources/Shared/LiveActivity/LiveActivityShared.swift"
 # Speed and pitch for Siri and Shortcuts (Shared/Player): intents that stand alone, which the app runs.
 SPEED_INTENTS="$ROOT/tweak/Sources/Shared/Player/SpeedPitchIntents.swift"
 WIDGET="$ROOT/extension/LiveActivity/LiveActivityWidget.swift"
+# The home screen widgets, in the same extension.
+HOME_WIDGETS="$ROOT/extension/LiveActivity/HomeWidgets.swift"
 
 SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
 TOOLCHAIN="$(dirname "$(dirname "$(dirname "$(xcrun --find swiftc)")")")"
@@ -48,8 +50,8 @@ metadata() {
 
 echo "==> building $NAME.appex"
 xcrun --sdk iphoneos swiftc -O -wmo -parse-as-library -target arm64-apple-ios17.0 -module-name "$NAME" \
-  -Xlinker -e -Xlinker _NSExtensionMain -o "$APPEX/$NAME" "$SHARED" "$WIDGET"
-metadata "$NAME" 17.0 "$APPEX" "$SHARED" "$WIDGET"
+  -Xlinker -e -Xlinker _NSExtensionMain -o "$APPEX/$NAME" "$SHARED" "$WIDGET" "$HOME_WIDGETS"
+metadata "$NAME" 17.0 "$APPEX" "$SHARED" "$WIDGET" "$HOME_WIDGETS"
 
 sed -e "s/HOST_BUNDLE_ID/$(plutil -extract CFBundleIdentifier raw -o - "$HOST_PLIST")/" \
     -e "s/HOST_SHORT_VERSION/$(plutil -extract CFBundleShortVersionString raw -o - "$HOST_PLIST")/" \

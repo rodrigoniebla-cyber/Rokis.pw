@@ -115,3 +115,42 @@ struct SGLiveActivityActionIntent: LiveActivityIntent {
 
 // Where the app keeps the cover for the player view, inside an App Group's container.
 let SGLiveActivityCoverFolder = "Library/SpotifyGlass/LiveActivity"
+
+// MARK: - The home screen widgets (extension/LiveActivity/HomeWidgets.swift, Shared/HomeWidgets)
+
+// Their kinds, which Spotify names to have them drawn again.
+enum SGHomeWidgetKind {
+    static let nowPlaying = "rokis.nowPlaying"
+    static let visualizer = "rokis.visualizer"
+    static let lyrics = "rokis.lyrics"
+}
+
+// Where Spotify writes what they show (state.json and the cover), inside an App Group's container.
+let SGHomeWidgetFolder = "Library/SpotifyGlass/Widgets"
+
+// A tap on a home screen or lock screen widget: one of SGLiveActivityActionIntent's actions, or queue:URI to skip
+// ahead to a track up next. An audio playback intent, so iOS runs it inside Spotify, waking it in the background
+// when it is not running, rather than in the widget's extension.
+@available(iOS 17.0, *)
+struct SGWidgetActionIntent: AudioPlaybackIntent {
+    static let title: LocalizedStringResource = "Widget control"
+    static let isDiscoverable = false
+
+    @Parameter(title: "Action")
+    var action: String
+
+    init() {}
+
+    init(_ action: String) {
+        self.action = action
+    }
+
+    func perform() async throws -> some IntentResult {
+        if action.hasPrefix("queue:") {
+            NotificationCenter.default.post(name: SGLiveActivityPlayNotification, object: String(action.dropFirst(6)))
+        } else {
+            NotificationCenter.default.post(name: SGLiveActivityActionNotification, object: action)
+        }
+        return .result()
+    }
+}

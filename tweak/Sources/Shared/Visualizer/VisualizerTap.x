@@ -97,11 +97,12 @@ static void join(void) {
     });
 }
 
-// A ring on screen in the app, the lock screen's frames (LockScreenLyrics.x) or the Live Activity's player
-// view (Shared/LiveActivity), any of them keeps it reading.
-static BOOL sg_ringShows, sg_lockScreen, sg_liveActivity;
+// A ring on screen in the app, the lock screen's frames (LockScreenLyrics.x), the Live Activity's player
+// view (Shared/LiveActivity) or a Visualizer widget on the home screen (Shared/HomeWidgets), any of them keeps
+// it reading.
+static BOOL sg_ringShows, sg_lockScreen, sg_liveActivity, sg_widgets;
 static void listen(void) {
-    BOOL listening = sg_ringShows || sg_lockScreen || sg_liveActivity;
+    BOOL listening = sg_ringShows || sg_lockScreen || sg_liveActivity || sg_widgets;
     if (listening && !SGOff("visualizer")) join();
     atomic_store(&sg_listening, listening);
 }
@@ -118,6 +119,12 @@ void SGVisualizerSetLockScreenListening(BOOL listening) {
 
 void SGVisualizerSetLiveActivityListening(BOOL listening) {
     sg_liveActivity = listening;
+    listen();
+}
+
+void SGVisualizerSetWidgetListening(BOOL listening) {
+    if (listening == sg_widgets) return;
+    sg_widgets = listening;
     listen();
 }
 

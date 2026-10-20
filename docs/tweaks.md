@@ -16,7 +16,7 @@
     tweak/Sources/App/          what brings the layers together: Mod Settings' root and composed pages, the Mod page,
                                 backup and signing, the welcome tour
     tweak/Sources/Diagnostics/  screen dumps, the tree server and the main thread hang sampler of FLEX builds
-    extension/LiveActivity/     the Live Activity widget, a WidgetKit extension of its own
+    extension/LiveActivity/     the Live Activity and the home screen widgets, a WidgetKit extension of their own
     extension/AppGroups/        a dylib loaded by Spotify and its home screen widget that moves Spotify's App Groups
                                 into a group the re-signed IPA has; without it the widget stays a placeholder. Keychain.m, in the
                                 same dylib (so in Spotify and each Siri and widget extension), answers the SecItem calls that name
@@ -298,6 +298,18 @@ Shared:
                   LiveActivityIntents run inside Spotify and take a second or two to show on the card. The widget is extension/LiveActivity; ActivityKit pairs the two
                   by the attributes' type in LiveActivityShared.swift, compiled into both. It starts only with Spotify
                   in front; its switch and its view apply at once
+    HomeWidgets/  home screen and lock screen widgets (iOS 17+, Mod Settings > Widgets), in the look of Spotify's own:
+                  Now Playing (small, medium, large with three tracks up next, and the lock screen's rectangle and a
+                  circle that plays and pauses), Visualizer (the cover in a ring of 32 bars in its colours) and Lyrics
+                  (the line being sung). HomeWidgets.x writes state.json and the cover into the app's first App Group
+                  on every player report and, while a widget is placed (WidgetCenter's configurations, asked every 30 s
+                  and on going to and from the background), each second for a like or a seek and every 1, 2 or 5 s for
+                  the bars (a fourth listener of the visualizer's tap, only while Spotify is away and playing) and the
+                  line; it asks WidgetKit to draw again only the kinds whose part changed. The widgets are
+                  extension/LiveActivity/HomeWidgets.swift, in the Live Activity's extension, which reads the newest
+                  state.json in the App Groups it is signed with. Taps are SGWidgetActionIntent, an AudioPlaybackIntent
+                  (LiveActivityShared.swift) iOS runs inside Spotify, waking it when needed, posting the Live
+                  Activity's actions, whose observers are now set up at launch whether the Live Activity is on or not
 
 Native:
 

@@ -47,6 +47,10 @@ private typealias Tab = SGLyricsAttributes.Tab
 struct SGLiveActivityBundle: WidgetBundle {
     var body: some Widget {
         SGLyricsLiveActivity()
+        // The home screen widgets (HomeWidgets.swift).
+        SGNowPlayingWidget()
+        SGVisualizerWidget()
+        SGLyricsWidget()
     }
 }
 

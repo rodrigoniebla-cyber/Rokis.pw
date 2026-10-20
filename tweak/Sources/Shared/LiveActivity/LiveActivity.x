@@ -526,6 +526,28 @@ static void runAction(NSString *action) {
     SGLog(@"live activity: %@ -> %@", action, result);
 }
 
+BOOL SGLiveActivityLiked(NSString *trackID) {
+    return trackID && [sg_liked containsObject:trackID];
+}
+
+// The taps' intents, from the card and from the home screen widgets (Shared/HomeWidgets), which work with the
+// Live Activity off too.
+static void observeTaps(void) {
+    static dispatch_once_t observing;
+    dispatch_once(&observing, ^{
+        NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
+        [center addObserverForName:@"SGLiveActivityPlay" object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
+            if ([note.object isKindOfClass:NSString.class]) playQueued(note.object);
+        }];
+        // The new state goes out at once rather than on the next tick, the card being slow enough to redraw.
+        [center addObserverForName:@"SGLiveActivityAction" object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
+            if (![note.object isKindOfClass:NSString.class]) return;
+            runAction(note.object);
+            if (@available(iOS 17.0, *)) { if (sg_timer) tick(); }
+        }];
+    });
+}
+
 void SGSetLiveActivityEnabled(BOOL on) {
     if (SGOff("liveactivity")) on = NO;
     if (@available(iOS 17.0, *)) {
@@ -546,19 +568,7 @@ void SGSetLiveActivityEnabled(BOOL on) {
             SGLog(@"live activity: not on this device");
             return;
         }
-        static dispatch_once_t observing;
-        dispatch_once(&observing, ^{
-            NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
-            [center addObserverForName:@"SGLiveActivityPlay" object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
-                if ([note.object isKindOfClass:NSString.class]) playQueued(note.object);
-            }];
-            // The new state goes out at once rather than on the next tick, the card being slow enough to redraw.
-            [center addObserverForName:@"SGLiveActivityAction" object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
-                if (![note.object isKindOfClass:NSString.class]) return;
-                runAction(note.object);
-                if (sg_timer) tick();
-            }];
-        });
+        observeTaps();
         startTimer(kTick);
         SGLog(@"live activity: on");
     }
@@ -572,6 +582,7 @@ void SGSetLiveActivityEnabled(BOOL on) {
         BOOL on = SGFlag(SGKeyLiveActivity, NO);
         // Off, one left from a launch before the switch went off is ended.
         dispatch_async(dispatch_get_main_queue(), ^{
+            observeTaps();
             if (on) SGSetLiveActivityEnabled(YES);
             else [SGLiveActivityBridge end];
         });

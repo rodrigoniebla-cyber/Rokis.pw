@@ -47,6 +47,9 @@ typedef NS_ENUM(NSInteger, SGLiveActivityView) {
 #define SGKeyLiveActivityBarsRate @"spotifyglass.liveActivity.bars.rate"
 
 
+// Whether the track (base62 id) was liked from the card or a widget this session.
+BOOL SGLiveActivityLiked(NSString *trackID);
+
 // From the switch: starts following the player (and the activity, the app being in front) or ends both.
 void SGSetLiveActivityEnabled(BOOL on);
 

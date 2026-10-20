@@ -25,6 +25,7 @@
 #import "Shared/Flags/Flags.h"
 #import "Shared/AudioEffects/AudioEffectsPage.h"
 #import "Shared/LiveActivity/LiveActivity.h"
+#import "Shared/HomeWidgets/HomeWidgets.h"
 #import "Shared/HeadGestures/HeadGestures.h"
 #import "Shared/ListeningStats/ListeningStats.h"
 #import "App/About/About.h"
@@ -71,6 +72,10 @@ static UIViewController *modSettingsPage(void) {
         SGModRow *liveActivity = pageRow(@"Live Activity", @"platter.filled.top.iphone", ^UIViewController *{ return SGLiveActivitySettingsPage(); });
         liveActivity.value = ^NSString *{ return SGLiveActivitySummary(); };
         [parts addObject:liveActivity];
+        // The home screen widgets draw nothing on Spotify's screens either; their buttons need iOS 17.
+        SGModRow *widgets = pageRow(@"Widgets", @"square.grid.2x2", ^UIViewController *{ return SGHomeWidgetsSettingsPage(); });
+        widgets.value = ^NSString *{ return SGHomeWidgetsSummary(); };
+        [parts addObject:widgets];
     }
     // AirPods gestures read the head, not a screen, so both looks have them.
     SGModRow *headGestures = pageRow(@"AirPods gestures", @"airpodspro", ^UIViewController *{ return SGHeadGesturesSettingsPage(); });
