@@ -49,7 +49,6 @@ struct SGLiveActivityBundle: WidgetBundle {
         SGLyricsLiveActivity()
         // The home screen widgets (HomeWidgets.swift).
         SGNowPlayingWidget()
-        SGVisualizerWidget()
         SGLyricsWidget()
     }
 }
@@ -196,7 +195,7 @@ private struct CoverRing: View {
         let heard = levels(state.bars)
         let bands = heard.isEmpty ? 24 : heard.count
         let count = bands * 2
-        let inner = size * 0.33
+        let inner = heard.isEmpty ? size * 0.46 : size * 0.33
         let reach = size * 0.155
         let width = max(1.5, size * 0.03)
         let colours = (state.barColours ?? []).map(rgb)
@@ -204,7 +203,8 @@ private struct CoverRing: View {
             ? AnyShapeStyle(LinearGradient(colors: colours, startPoint: .bottom, endPoint: .top))
             : AnyShapeStyle(colours.first ?? coverColour(state, dim: false))
         ZStack {
-            if state.backlight == true {
+            // The app sends bars no more (the visualizer is the app's alone); a state from an older build may.
+            if state.backlight == true && !heard.isEmpty {
                 let glow = backlightColour(state)
                 let solid = (inner + 2 + reach * 0.6) / (size / 2)
                 Circle()
@@ -215,7 +215,7 @@ private struct CoverRing: View {
                     ]), center: .center, startRadius: 0, endRadius: size / 2))
                     .frame(width: size, height: size)
             }
-            ForEach(0..<count, id: \.self) { index in
+            ForEach(0..<(heard.isEmpty ? 0 : count), id: \.self) { index in
                 let band = index < bands ? index : count - 1 - index
                 let level = band < heard.count ? heard[band] : 0
                 let length = width + reach * level

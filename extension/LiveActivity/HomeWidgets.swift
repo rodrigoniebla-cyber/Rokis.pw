@@ -1,7 +1,7 @@
 // The home screen widgets, drawn the way Spotify's own are: near black, white bold titles over grey, the
 // Spotify mark in the corner, and the cover with rounded corners. Now Playing (the song and its controls, the
-// tracks up next on the large one, and the lock screen's), Visualizer (the cover in a ring of the bars in the
-// cover's colours) and Lyrics (the line being sung). Spotify writes what they show into an App Group
+// tracks up next on the large one, and the lock screen's) and Lyrics (the line being sung). The visualizer is
+// the app's alone, so no widget has bars. Spotify writes what they show into an App Group
 // (Shared/HomeWidgets), which this extension finds among its own entitlements, and asks WidgetKit to draw
 // them again when it changes. A tap on a control is SGWidgetActionIntent, an audio playback intent iOS runs
 // inside Spotify. Built with the Live Activity by scripts/build-extension.sh.
@@ -33,8 +33,8 @@ struct SGWidgetState: Codable {
     var cover: String?             // a file next to the state
     var tint: Int?                 // 0xRRGGBB, -1 unknown
     var colours: [Int]?            // the cover's main colours, darkest first
-    var backlight: Bool?
-    var bars: String?              // a hex digit a band, lowest first
+    var backlight: Bool?           // unused: written by builds that had the Visualizer widget
+    var bars: String?              // unused, likewise
     var line: String?
     var next: String?
     var upNext: [SGWidgetTrack]?
@@ -92,7 +92,7 @@ private func loadEntry() -> SGWidgetEntry {
 private let sample = SGWidgetState(updated: Date().timeIntervalSince1970, track: "", title: "Song title", artist: "Artist",
                                    paused: false, liked: true, shuffle: false, repeatMode: 0, duration: 200, position: 70,
                                    cover: nil, tint: 0x1DB954, colours: [0x0B3D20, 0x1DB954, 0x9BF0B8], backlight: false,
-                                   bars: "6a9c7b5869a7c8b6957a8c6b", line: "The line being sung", next: "and the one after it",
+                                   bars: nil, line: "The line being sung", next: "and the one after it",
                                    upNext: [SGWidgetTrack(title: "Next song", artist: "Artist", uri: ""),
                                             SGWidgetTrack(title: "And another", artist: "Artist", uri: "")],
                                    background: 0)
@@ -132,10 +132,6 @@ private func playing(_ state: SGWidgetState, at date: Date) -> Bool {
 
 private func rgb(_ value: Int) -> Color {
     Color(red: Double((value >> 16) & 0xFF) / 255, green: Double((value >> 8) & 0xFF) / 255, blue: Double(value & 0xFF) / 255)
-}
-
-private func luminance(_ value: Int) -> Double {
-    0.2126 * Double((value >> 16) & 0xFF) / 255 + 0.7152 * Double((value >> 8) & 0xFF) / 255 + 0.0722 * Double(value & 0xFF) / 255
 }
 
 // Spotify's black, or the cover's colour fading into it from the top, the way Spotify's player is lit.
@@ -364,54 +360,6 @@ private struct Empty: View {
     }
 }
 
-// MARK: - The visualizer's ring
-
-private struct Ring: View {
-    let state: SGWidgetState
-    let cover: UIImage?
-    let size: CGFloat
-
-    var body: some View {
-        let heard = (state.bars ?? "").compactMap { $0.hexDigitValue }.map { Double($0) / 15 }
-        let bands = heard.isEmpty ? 32 : heard.count
-        let count = bands * 2
-        let inner = size * 0.32
-        let reach = size * 0.16
-        let width = max(1.5, size * 0.024)
-        let colours = (state.colours ?? []).map(rgb)
-        let fill: AnyShapeStyle = colours.count > 1
-            ? AnyShapeStyle(LinearGradient(colors: colours, startPoint: .bottom, endPoint: .top))
-            : AnyShapeStyle(colours.first ?? spotifyGreen)
-        ZStack {
-            if state.backlight == true {
-                let values = state.colours ?? []
-                let light = values.isEmpty ? 1 : values.map(luminance).reduce(0, +) / Double(values.count)
-                let glow = light < 0.45 ? Color.white.opacity(0.42) : Color.black.opacity(0.62)
-                Circle()
-                    .fill(RadialGradient(gradient: Gradient(stops: [
-                        .init(color: glow, location: 0),
-                        .init(color: glow, location: min(0.95, (inner + 2 + reach * 0.6) / (size / 2))),
-                        .init(color: glow.opacity(0), location: 1),
-                    ]), center: .center, startRadius: 0, endRadius: size / 2))
-            }
-            ForEach(0..<count, id: \.self) { index in
-                let band = index < bands ? index : count - 1 - index
-                let level = band < heard.count ? heard[band] : 0.08
-                let length = width + reach * level
-                Capsule()
-                    .fill(fill)
-                    .frame(width: width, height: length)
-                    .offset(y: -(inner + 3 + length / 2))
-                    .rotationEffect(.degrees((Double(index) + 0.5) * 360 / Double(count)))
-            }
-            Cover(image: cover, state: state, corner: inner)
-                .frame(width: inner * 2, height: inner * 2)
-                .clipShape(Circle())
-        }
-        .frame(width: size, height: size)
-    }
-}
-
 // MARK: - Now Playing
 
 struct SGNowPlayingView: View {
@@ -542,75 +490,6 @@ struct SGNowPlayingWidget: Widget {
         .configurationDisplayName("Now Playing")
         .description("The song playing, with play, skip, like and shuffle.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryRectangular, .accessoryCircular])
-    }
-}
-
-// MARK: - Visualizer
-
-struct SGVisualizerWidgetView: View {
-    @Environment(\.widgetFamily) private var family
-    let entry: SGWidgetEntry
-
-    var body: some View {
-        Group {
-            if let state = entry.state {
-                switch family {
-                case .systemMedium:
-                    HStack(spacing: 12) {
-                        Ring(state: state, cover: entry.cover, size: 130)
-                        VStack(alignment: .leading, spacing: 0) {
-                            HStack(alignment: .top) {
-                                Titles(state: state)
-                                Spacer(minLength: 4)
-                                SpotifyMark(size: 20)
-                            }
-                            Spacer(minLength: 4)
-                            TrackBar(state: state, date: entry.date, times: false)
-                            Spacer(minLength: 4)
-                            Controls(state: state, date: entry.date, play: 34, glyph: 17, extras: false)
-                        }
-                        .padding(.vertical, 16)
-                    }
-                    .padding(.leading, 12)
-                    .padding(.trailing, 16)
-                case .systemLarge:
-                    ZStack(alignment: .topTrailing) {
-                        VStack(spacing: 10) {
-                            Ring(state: state, cover: entry.cover, size: 180)
-                            Titles(state: state, titleSize: 17)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            TrackBar(state: state, date: entry.date, times: false)
-                            Controls(state: state, date: entry.date, play: 44, glyph: 20)
-                        }
-                        SpotifyMark(size: 22)
-                    }
-                    .padding(16)
-                default:
-                    ZStack(alignment: .topTrailing) {
-                        Ring(state: state, cover: entry.cover, size: 150)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        SpotifyMark(size: 18)
-                            .padding(10)
-                    }
-                }
-            } else {
-                Empty(entry: entry).padding(16)
-            }
-        }
-        .widgetURL(URL(string: "spotify:"))
-        .containerBackground(for: .widget) { WidgetBackground(state: entry.state) }
-    }
-}
-
-struct SGVisualizerWidget: Widget {
-    var body: some WidgetConfiguration {
-        StaticConfiguration(kind: SGHomeWidgetKind.visualizer, provider: SGWidgetProvider()) { entry in
-            SGVisualizerWidgetView(entry: entry)
-        }
-        .configurationDisplayName("Visualizer")
-        .description("The cover in a ring of bars that move with the music, in the cover's colours.")
-        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
-        .contentMarginsDisabled()
     }
 }
 

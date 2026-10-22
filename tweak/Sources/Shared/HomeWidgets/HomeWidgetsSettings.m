@@ -8,16 +8,16 @@
 UIViewController *SGHomeWidgetsSettingsPage(void) {
     SGModRow *background = SGChoiceRow(@"Background", nil, SGKeyHomeWidgetsBackground, @[@"Spotify black", @"Cover colour"], 0);
     background.choiceNotes = @[@"Near black, as Spotify's own widgets are", @"The cover's colour fading into black from the top"];
-    SGModRow *rate = SGChoiceRow(@"Visualizer and lyrics step", nil, SGKeyHomeWidgetsRate,
+    SGModRow *rate = SGChoiceRow(@"Lyrics step", nil, SGKeyHomeWidgetsRate,
                                  @[@"Every second", @"Every 2 seconds", @"Every 5 seconds"], 1);
     rate.choiceNotes = @[@"The most lively, and the most battery", @"Lively without asking too much", @"Lightest on the battery"];
     rate.choiceFooter = @"A widget is a picture iOS draws again only when Spotify sends it something new, and iOS may hold back "
-                         "pictures that come too fast, so the bars and lines step rather than move with every beat.";
+                         "pictures that come too fast, so the lines step rather than follow the singing exactly.";
     SGModRow *placed = SGStatRow(@"On your screens", ^NSString *{ return SGHomeWidgetsSummary(); });
     SGModRow *group = SGStatRow(@"App Group", ^NSString *{ return SGHomeWidgetsGroup() ?: @"None"; });
     NSString *footer = SGHomeWidgetsGroup()
         ? @"Touch and hold the Home Screen, tap Edit, then Add Widget, and pick Spotify: Now Playing (small, medium, large and the "
-           "lock screen's), Visualizer and Lyrics are the mod's. Their buttons play, pause, skip, like and shuffle in Spotify, and the "
+           "lock screen's) and Lyrics are the mod's. Their buttons play, pause, skip, like and shuffle in Spotify, and the "
            "large Now Playing plays a track up next when you tap it. The settings apply straight away."
         : @"This copy of Spotify is signed without an App Group, so the widgets have no way to read what Spotify plays. Sign the IPA "
            "with a certificate or app that gives it an App Group (the same one for the app and its extensions).";

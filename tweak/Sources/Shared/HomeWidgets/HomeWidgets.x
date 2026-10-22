@@ -1,8 +1,8 @@
 // What the home screen widgets show (HomeWidgets.h), written whenever it changes: the song, paused or playing,
 // liked, shuffle, the tracks up next and the cover with its colours at once, on every change the player
-// reports; and, while a Visualizer or Lyrics widget is placed and a song plays, the bars and the line being
-// sung as often as Mod Settings > Widgets asks. A widget is a picture iOS draws again only when asked, and it
-// may hold back asks that come too fast, so the moving ones step rather than move with every beat.
+// reports; and, while a Lyrics widget is placed and a song plays, the line being sung as often as Mod Settings >
+// Widgets asks. A widget is a picture iOS draws again only when asked, and it may hold back asks that come too
+// fast, so the line steps rather than moves with the singing. The visualizer is the app's alone: no widget has bars.
 #import <UIKit/UIKit.h>
 #import <MediaPlayer/MediaPlayer.h>
 #import <objc/runtime.h>
@@ -22,7 +22,6 @@ extern CFTypeRef SecTaskCopyValueForEntitlement(SecTaskRef task, CFStringRef ent
 
 @interface SGHomeWidgetsBridge : NSObject
 @property (class, nonatomic, readonly, copy) NSString *nowPlayingKind;
-@property (class, nonatomic, readonly, copy) NSString *visualizerKind;
 @property (class, nonatomic, readonly, copy) NSString *lyricsKind;
 + (void)reload:(NSArray<NSString *> *)kinds;
 + (void)placed:(void (^)(NSArray<NSString *> *kinds))done;
@@ -34,13 +33,12 @@ static const NSTimeInterval kPlacedEvery = 30;
 static const CGFloat kCoverSide = 360;
 static const NSUInteger kUpNext = 3;
 static const NSInteger kBreakMs = 4000;
-enum { kBands = 32 };
 
 static NSArray<NSString *> *sg_placed;
 static NSTimer *sg_ticker;
-// What was last written: the part every widget shows, the bars and the line, and when the last two went.
-static NSString *sg_common, *sg_bars = @"", *sg_line = @"", *sg_next = @"";
-static CFTimeInterval sg_barsAt, sg_lineAt;
+// What was last written: the part every widget shows and the line, and when the line went.
+static NSString *sg_common, *sg_line = @"", *sg_next = @"";
+static CFTimeInterval sg_lineAt;
 static NSString *sg_askedLyrics;
 
 static void update(BOOL force);
@@ -233,10 +231,7 @@ static void update(BOOL force) {
     id<SPTPlayer> player = SGKaraokePlayer();
     SPTPlayerState *state = player.state ?: SGPlayerState();
     SPTPlayerTrack *track = state.track;
-    if (!folder || !track.trackTitle.length) {
-        SGVisualizerSetWidgetListening(NO);
-        return;
-    }
+    if (!folder || !track.trackTitle.length) return;
     NSString *trackID = SGKaraokePlayingTrack();
     refreshCover(trackID);
     BOOL paused = state.isPaused || !state.isPlaying;
@@ -250,7 +245,6 @@ static void update(BOOL force) {
     NSArray<NSDictionary *> *upNext = upNextOf(state);
     NSString *cover = [trackID isEqualToString:sg_coverTrack] && !sg_coverReading ? sg_coverFile : nil;
     NSInteger background = SGInt(SGKeyHomeWidgetsBackground, 0);
-    BOOL backlight = SGFlag(SGKeyVisualizerBacklight, NO);
     // Playing, the widget's bar runs on its own from the start of the track, so only a seek moves it: the start
     // is compared in steps of two seconds; paused, the position itself.
     long long anchor = paused ? llround(position) : llround((now - position) / 2);
@@ -259,26 +253,11 @@ static void update(BOOL force) {
     NSString *common = [@[trackID ?: @"", track.trackTitle, track.artistName ?: @"", paused ? @"1" : @"0", @(anchor).stringValue,
                           liked ? @"1" : @"0", options.shufflingContext ? @"1" : @"0", @(repeatMode).stringValue,
                           cover ?: @"", @(sg_tint).stringValue, [sg_colours componentsJoinedByString:@","],
-                          @(background).stringValue, backlight ? @"1" : @"0", [upNextText componentsJoinedByString:@","]]
+                          @(background).stringValue, [upNextText componentsJoinedByString:@","]]
                         componentsJoinedByString:@"\n"];
 
     CFTimeInterval clock = CACurrentMediaTime();
     NSTimeInterval every = stepEvery();
-    BOOL away = UIApplication.sharedApplication.applicationState != UIApplicationStateActive;
-    BOOL wantBars = !paused && away && placedCount(SGHomeWidgetsBridge.visualizerKind) > 0 && !SGOff("visualizer");
-    SGVisualizerSetWidgetListening(wantBars);
-    NSString *bars = sg_bars;
-    if (!wantBars) {
-        bars = @"";
-    } else if (clock - sg_barsAt >= every - 0.05) {
-        float levels[kBands];
-        SGVisualizerReadBars(levels, kBands, (float)MIN(0.25, sg_barsAt > 0 ? clock - sg_barsAt : 0.25));
-        sg_barsAt = clock;
-        char digits[kBands + 1];
-        for (NSUInteger i = 0; i < kBands; i++) digits[i] = "0123456789abcdef"[MAX(0, MIN(15, lroundf(levels[i] * 15)))];
-        digits[kBands] = 0;
-        bars = @(digits);
-    }
     NSString *line = sg_line, *next = sg_next;
     if (placedCount(SGHomeWidgetsBridge.lyricsKind) > 0 && (clock - sg_lineAt >= every - 0.05 || ![common isEqualToString:sg_common])) {
         line = lineOf(trackID, ms, &next);
@@ -287,19 +266,18 @@ static void update(BOOL force) {
 
     NSMutableArray<NSString *> *kinds = [NSMutableArray array];
     if (force || ![common isEqualToString:sg_common]) {
-        [kinds addObjectsFromArray:@[SGHomeWidgetsBridge.nowPlayingKind, SGHomeWidgetsBridge.visualizerKind, SGHomeWidgetsBridge.lyricsKind]];
+        [kinds addObjectsFromArray:@[SGHomeWidgetsBridge.nowPlayingKind, SGHomeWidgetsBridge.lyricsKind]];
     } else {
-        if (![bars isEqualToString:sg_bars]) [kinds addObject:SGHomeWidgetsBridge.visualizerKind];
         if (![line isEqualToString:sg_line] || ![next isEqualToString:sg_next]) [kinds addObject:SGHomeWidgetsBridge.lyricsKind];
     }
     if (!kinds.count) return;
-    sg_common = common; sg_bars = bars; sg_line = line; sg_next = next;
+    sg_common = common; sg_line = line; sg_next = next;
 
     NSDictionary *written = @{
         @"updated": @(now), @"track": trackID ?: @"", @"title": track.trackTitle, @"artist": track.artistName ?: @"",
         @"paused": @(paused), @"liked": @(liked), @"shuffle": @(options.shufflingContext), @"repeatMode": @(repeatMode),
         @"duration": @(duration), @"position": @(position), @"cover": cover ?: @"", @"tint": @(sg_tint), @"colours": sg_colours ?: @[],
-        @"backlight": @(backlight), @"bars": bars, @"line": line, @"next": next, @"upNext": upNext, @"background": @(background),
+        @"line": line, @"next": next, @"upNext": upNext, @"background": @(background),
     };
     NSData *data = [NSJSONSerialization dataWithJSONObject:written options:0 error:nil];
     if (![data writeToURL:[folder URLByAppendingPathComponent:@"state.json"] options:NSDataWritingAtomic error:nil]) return;
@@ -308,7 +286,7 @@ static void update(BOOL force) {
 
 // MARK: - When
 
-// Ticks while a widget is placed, for what the player does not report: the bars, the line, a like, a seek.
+// Ticks while a widget is placed, for what the player does not report: the line, a like, a seek.
 static void followPlaced(void) {
     if (sg_placed.count && !sg_ticker) {
         sg_ticker = [NSTimer timerWithTimeInterval:kTick repeats:YES block:^(NSTimer *timer) { update(NO); }];
@@ -317,7 +295,6 @@ static void followPlaced(void) {
     } else if (!sg_placed.count && sg_ticker) {
         [sg_ticker invalidate];
         sg_ticker = nil;
-        SGVisualizerSetWidgetListening(NO);
     }
 }
 

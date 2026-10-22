@@ -26,9 +26,12 @@ SGModRow *SGLockScreenLyricsRow(void) {
 }
 
 SGModRow *SGLockScreenLyricsPlaceRow(void) {
-    SGModRow *row = SGChoiceRow(@"Show the line", nil, SGKeyLockScreenLyricsPlace, @[@"In place of the artist", @"As the artwork", @"Both"],
+    SGModRow *row = SGChoiceRow(@"Show the line", nil, SGKeyLockScreenLyricsPlace, @[@"In place of the artist", @"As the artwork", @"Both", @"Under the cover"],
                                 SGLockScreenLyricsArtist);
-    row.choiceNotes = @[@"The line under the title", @"The line and the next over the cover, blurred", @"Under the title and over the cover"];
+    row.choiceNotes = @[@"The line under the title", @"The line and the next over the cover, blurred", @"Under the title and over the cover",
+                         @"The cover as it is, the line along its bottom in white outlined in black, in the app's font"];
+    row.choiceFooter = @"As the artwork, the picture is drawn again only when the line changes, a few times a verse. Applies after "
+                        "you restart Spotify.";
     SGWaitsOn(row, SGKeyLockScreenLyrics, NO);
     return row;
 }

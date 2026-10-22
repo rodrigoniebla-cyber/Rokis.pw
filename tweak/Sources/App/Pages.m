@@ -73,7 +73,6 @@ UIViewController *SGNavbarPage(void) {
 UIViewController *SGLyricsSettingsPage(void) {
     BOOL redesigned = SGRedesignedUIStored();
     NSMutableArray<SGModRow *> *more = [NSMutableArray arrayWithObjects:SGLockScreenLyricsRow(), SGLockScreenLyricsPlaceRow(), nil];
-    [more addObjectsFromArray:SGLockScreenVisualizerRows()];
     [more addObject:SGLocalLyricsRow()];
     if (!redesigned) [more insertObject:SGGlassLyricsRow() atIndex:0];
     NSMutableArray<SGModSection *> *sections = [NSMutableArray arrayWithObject:SGLyricsSourcesSection(redesigned)];
@@ -90,28 +89,22 @@ UIViewController *SGPlayerSettingsPage(void) {
     blocked.value = ^NSString *{
         return SGFlag(SGKeyArtistBlock, NO) ? @(SGBlockedArtists().count).stringValue : @"Off";
     };
-    // Under the native look there is no ring in the player, so the page sets the lock screen's.
+    // The ring round the cover is the redesigned player's, and the visualizer shows nowhere outside the app, so
+    // the native look has no Visualizer row.
     BOOL redesignedLook = SGRedesignedUIStored();
-    SGModRow *visualizer = SGPageRow(@"Visualizer", ^UIViewController *{
-        return redesignedLook ? SGRPlayerVisualizerPage()
-            : SGVisualizerSettingsPage(nil, nil, @"The ring round the cover is the redesigned player's. Under this look these set the "
-                                                   "lock screen's visualizer.");
-    });
-    visualizer.value = ^NSString *{
-        BOOL on = redesignedLook ? SGFlag(SGRKeyPlayerVisualizer, NO) : SGFlag(SGKeyLockScreenVisualizer, NO);
-        return on ? @"On" : @"Off";
-    };
+    SGModRow *visualizer = SGPageRow(@"Visualizer", ^UIViewController *{ return SGRPlayerVisualizerPage(); });
+    visualizer.value = ^NSString *{ return SGFlag(SGRKeyPlayerVisualizer, NO) ? @"On" : @"Off"; };
     SGModRow *presets = SGPageRow(@"Speed and pitch presets", ^UIViewController *{ return SGSpeedPitchPresetsPage(); });
     presets.value = ^NSString *{ return SGSpeedPitchPresetsCountText(); };
     BOOL native = !SGRedesignedUIStored();
 
-    NSMutableArray<SGModSection *> *sections = [NSMutableArray arrayWithObject:SGSection(nil, @[
+    NSMutableArray<SGModRow *> *top = [NSMutableArray arrayWithObjects:
         SGWithSymbol(SGPageRow(@"Gestures", ^UIViewController *{ return SGGesturesSettingsPage(); }), @"hand.tap"),
         SGWithSymbol(SGOptionRow(@"Hold to play faster", @"Either side of the cover, 2× until you let go", SGKeyGestureHold), @"forward"),
-        SGWithSymbol(blocked, @"person.crop.circle.badge.xmark"),
-        SGWithSymbol(visualizer, @"circle.dotted.circle"),
-        SGWithSymbol(presets, @"slider.horizontal.3"),
-    ])];
+        SGWithSymbol(blocked, @"person.crop.circle.badge.xmark"), nil];
+    if (redesignedLook) [top addObject:SGWithSymbol(visualizer, @"circle.dotted.circle")];
+    [top addObject:SGWithSymbol(presets, @"slider.horizontal.3")];
+    NSMutableArray<SGModSection *> *sections = [NSMutableArray arrayWithObject:SGSection(nil, top)];
     NSMutableArray<SGModRow *> *pages = [NSMutableArray array];
     if (native) {
         [pages addObject:SGWithSymbol(SGPageRow(@"Now playing bar", ^UIViewController *{ return SGNowPlayingBarSettingsPage(); }), @"rectangle.bottomthird.inset.filled")];

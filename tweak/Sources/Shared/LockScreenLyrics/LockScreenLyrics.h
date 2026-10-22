@@ -5,11 +5,13 @@
 
 #define SGKeyLockScreenLyrics @"spotifyglass.lockScreenLyrics"
 // Where the line shows: in place of the artist (unset), as the artwork, the line and the next one drawn over
-// the cover blurred, or both.
+// the cover blurred, both, or under the cover: the cover as it is with the line along its foot, white with a
+// black outline on a shade, in the app's font.
 #define SGKeyLockScreenLyricsPlace @"spotifyglass.lockScreenLyrics.place"
 
 typedef NS_ENUM(NSInteger, SGLockScreenLyricsPlace) {
     SGLockScreenLyricsArtist = 0,
     SGLockScreenLyricsArtwork,
     SGLockScreenLyricsBoth,
+    SGLockScreenLyricsCover,
 };

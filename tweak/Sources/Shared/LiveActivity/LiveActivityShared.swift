@@ -121,7 +121,6 @@ let SGLiveActivityCoverFolder = "Library/SpotifyGlass/LiveActivity"
 // Their kinds, which Spotify names to have them drawn again.
 enum SGHomeWidgetKind {
     static let nowPlaying = "rokis.nowPlaying"
-    static let visualizer = "rokis.visualizer"
     static let lyrics = "rokis.lyrics"
 }
 

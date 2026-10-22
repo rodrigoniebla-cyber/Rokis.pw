@@ -173,14 +173,10 @@ static NSInteger coverTint(void) {
 // small picture carried in the state for when it may not; with them, the cover's colours for the bars. Read
 // once per track, off the main thread, from the artwork Spotify hands the system's now playing, as coverTint.
 static const CGFloat kCoverSide = 240, kThumbnailSide = 40;
-enum { kLiveBands = 24 };
 static NSString *sg_coverTrack, *sg_coverGroup, *sg_coverKey;
 static NSData *sg_coverThumbnail;
 static NSArray<NSNumber *> *sg_barColours;
 static BOOL sg_coverReading;
-// The bars as last sent, and when.
-static NSString *sg_barsText = @"";
-static CFTimeInterval sg_barsAt;
 
 static NSURL *coverFolder(NSString **groupOut) {
     static NSURL *folder;
@@ -287,30 +283,6 @@ static void refreshCover(NSString *trackID) {
     });
 }
 
-// The bars for the player view: while it is the view, the bars are on, the song plays and Spotify is not in
-// front (where the card is not seen), read as often as the rate asks, as a hex digit a band.
-static NSString *liveBars(BOOL player, BOOL paused) {
-    BOOL want = player && !paused && !SGOff("visualizer") && SGEnabled(SGKeyLiveActivityBars)
-                && UIApplication.sharedApplication.applicationState != UIApplicationStateActive;
-    SGVisualizerSetLiveActivityListening(want);
-    if (!want) {
-        sg_barsText = @"";
-        return sg_barsText;
-    }
-    static const double rates[] = {1, 2, 4};
-    double rate = rates[MAX(0, MIN(2, SGInt(SGKeyLiveActivityBarsRate, 1)))];
-    CFTimeInterval now = CACurrentMediaTime();
-    if (sg_barsText.length && now - sg_barsAt < 1 / rate - 0.02) return sg_barsText;
-    float levels[kLiveBands];
-    SGVisualizerReadBars(levels, kLiveBands, (float)MIN(0.25, sg_barsAt > 0 ? now - sg_barsAt : 0.25));
-    sg_barsAt = now;
-    char digits[kLiveBands + 1];
-    for (NSUInteger i = 0; i < kLiveBands; i++) digits[i] = "0123456789abcdef"[MAX(0, MIN(15, lroundf(levels[i] * 15)))];
-    digits[kLiveBands] = 0;
-    sg_barsText = @(digits);
-    return sg_barsText;
-}
-
 // The translation of the line being sung, in the Lyrics page's language, where the lyrics have one.
 static NSString *translationOf(NSString *trackID) {
     if (!SGEnabled(SGKeyLiveActivityTranslation)) return @"";
@@ -402,13 +374,14 @@ static void tick(void) API_AVAILABLE(ios(17.0)) {
     BOOL liked = (panel || playerView) && trackID && [sg_liked containsObject:trackID];
     if (playerView) refreshCover(trackID);
     BOOL coverReady = playerView && [trackID isEqualToString:sg_coverTrack] && !sg_coverReading;
-    NSString *bars = liveBars(playerView, paused);
+    // The visualizer is the app's alone: the card has the cover without bars round it.
+    NSString *bars = @"";
     NSString *coverGroup = coverReady ? sg_coverGroup ?: @"" : @"", *coverKey = coverReady ? sg_coverKey ?: @"" : @"";
     NSData *coverThumbnail = coverReady ? sg_coverThumbnail : nil;
     NSArray<NSNumber *> *barColours = coverReady ? sg_barColours ?: @[] : @[];
     NSString *translation = view == SGLiveActivityLyrics && ![line isEqualToString:@"♪"] ? translationOf(trackID) : @"";
     NSInteger tint = coverTint();
-    BOOL backlight = playerView && SGFlag(SGKeyVisualizerBacklight, NO);
+    BOOL backlight = NO;
     // The bar runs on its own from the track's start to its end while it plays, so only a seek, a pause or a
     // new track sends a new state; paused, it stands where it is.
     double duration = [state respondsToSelector:@selector(duration)] ? state.duration : 0;
@@ -557,7 +530,6 @@ void SGSetLiveActivityEnabled(BOOL on) {
         sg_lastStart = nil;
         clearSleepTimer();
         if (!on) {
-            SGVisualizerSetLiveActivityListening(NO);
             [SGLiveActivityBridge end];
             SGLog(@"live activity: off");
             return;

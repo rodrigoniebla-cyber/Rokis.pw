@@ -85,7 +85,7 @@ NSArray<SGModSection *> *SGVisualizerSections(NSString *waitsOnKey) {
     SGModRow *bars = SGChoiceRow(@"Bars", nil, SGKeyVisualizerBars, @[@"48", @"64", @"96", @"128", @"256", @"512", @"1024"], 1);
     bars.choiceNotes = @[@"Chunky", @"The default", @"Detailed", @"Dense", @"Fine", @"Very fine", @"A smooth circle"];
     bars.choiceFooter = @"From 256 on the bars are read between the sound's bins and smoothed into one another, so the ring turns into a curve. "
-                         "Past 256 the lock screen's frames and the ring cost more to draw.";
+                         "Past 256 the ring costs more to draw.";
     bars.chosen = ^(NSInteger index) { changed(); };
     SGModRow *width = SGChoiceRow(@"Bar width", nil, SGKeyVisualizerWidth, @[@"Thin", @"Normal", @"Thick"], SGVisualizerWidthNormal);
     width.chosen = ^(NSInteger index) { changed(); };
@@ -137,7 +137,7 @@ NSArray<SGModSection *> *SGVisualizerSections(NSString *waitsOnKey) {
     return @[
         SGNotedSection(@"Sound", groups[0], @"Strength and Follows work as Music Haptics' do. Bass area is how much of the ring the "
                                              "lowest notes, 20 to 100 Hz, get; the rest runs from 100 Hz up."),
-        SGNotedSection(@"Shape", groups[1], @"Peaks and Rotation are the player's only."),
+        SGSection(@"Shape", groups[1]),
         SGNotedSection(@"Colour", groups[2], @"Cover gradient takes its colours from the cover on screen, lightened to show on "
                                               "black. Spots reads the cover blurred, so a small detail never becomes a colour; Main "
                                               "colours picks out the cover's own colours, the vivid ones first. Dark colours keeps a dark cover dark, black "
@@ -149,32 +149,5 @@ NSArray<SGModSection *> *SGVisualizerSections(NSString *waitsOnKey) {
 UIViewController *SGVisualizerSettingsPage(NSArray<SGModSection *> *leading, NSString *waitsOnKey, NSString *intro) {
     NSMutableArray<SGModSection *> *sections = [NSMutableArray arrayWithArray:leading ?: @[]];
     [sections addObjectsFromArray:SGVisualizerSections(waitsOnKey)];
-    [sections addObject:SGNotedSection(@"Lock screen", SGLockScreenVisualizerRows(),
-        @"The lock screen's artwork becomes the cover in the ring, drawn again several times a second while the song plays, in the "
-         "style and colour above. With lock screen lyrics showing the line as the artwork, the line sits under the ring. An animated "
-         "cover (Canvas) shows over it. Applies after you restart Spotify.")];
-    SGModRow *carPlay = SGOptionRow(@"CarPlay visualizer", @"The ring on CarPlay's Now Playing", SGKeyVisualizerCarPlay);
-    [sections addObject:SGNotedSection(@"CarPlay", @[carPlay],
-        @"While CarPlay is connected, the artwork on CarPlay's Now Playing becomes the cover in the ring, at the lock screen's "
-         "frames a second, even with Spotify open on your iPhone. CarPlay only lets an app show the screens Apple draws, so the "
-         "ring goes there as the artwork, and the car may update it less often than the lock screen does. Applies after you "
-         "restart Spotify.")];
     return [[SGModPage alloc] initWithTitle:@"Visualizer" intro:intro sections:sections footer:nil];
-}
-
-static NSArray<NSNumber *> *rates(void) { return @[@6, @10, @15]; }
-
-NSInteger SGLockScreenVisualizerFramesPerSecond(void) {
-    NSArray<NSNumber *> *list = rates();
-    NSInteger index = SGInt(SGKeyLockScreenVisualizerRate, 1);
-    return list[(NSUInteger)MAX(0, MIN((NSInteger)list.count - 1, index))].integerValue;
-}
-
-NSArray<SGModRow *> *SGLockScreenVisualizerRows(void) {
-    SGModRow *on = SGOptionRow(@"Lock screen visualizer", @"The cover in a ring of bars, as the artwork", SGKeyLockScreenVisualizer);
-    SGModRow *rate = SGChoiceRow(@"Lock screen frames", nil, SGKeyLockScreenVisualizerRate, @[@"6 a second", @"10 a second", @"15 a second"], 1);
-    rate.choiceNotes = @[@"Lightest on the battery", @"Smooth enough to follow the beat", @"Smoothest, and the most battery"];
-    rate.choiceFooter = @"The lock screen draws a new picture each time, so it never moves as smoothly as the ring in the player.";
-    SGWaitsOn(rate, SGKeyLockScreenVisualizer, NO);
-    return @[on, rate];
 }

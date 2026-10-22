@@ -5,7 +5,6 @@ import WidgetKit
 @objc(SGHomeWidgetsBridge)
 public final class SGHomeWidgetsBridge: NSObject {
     @objc public static let nowPlayingKind = SGHomeWidgetKind.nowPlaying
-    @objc public static let visualizerKind = SGHomeWidgetKind.visualizer
     @objc public static let lyricsKind = SGHomeWidgetKind.lyrics
 
     @objc public static func reload(_ kinds: [String]) {

@@ -124,17 +124,13 @@ Shared:
                   Spotify's id; its lyrics are what was typed in for it (Documents/spoti.pw/Local lyrics/<id>.lrc,
                   LRC or plain lines, from the Lyrics page's "Lyrics of this local file" sheet while one plays),
                   else LRCLIB's by the title, artist and length its URI carries
-    LockScreenLyrics/ the line being sung in the system's now playing, checked ten times a second; and the lock
-                  screen visualizer (Lyrics > Lock screen visualizer, read at launch): while Spotify is not on
-                  screen and the sound moves, a timer at 6, 10 or 15 a second reads the visualizer's bars, draws a
-                  frame off the main thread (Visualizer/SGVisualizerFrame.m: the cover as a circle in the ring over
-                  it blurred, the line under it when lock screen lyrics show the line as the artwork) and sends the
-                  info again with that frame as the artwork; the cover is fetched from Spotify's artwork on that
-                  queue, never the main thread. An animated artwork (LockScreenArtwork/) is drawn over it, so the
-                  Canvas is best off with it. The CarPlay visualizer (Visualizer > CarPlay, read at launch) runs the
-                  same frames while CarPlay is connected (the route's CarAudio port, or a CarPlay scene up), Spotify
-                  on screen or not: CarPlay's Now Playing shows the now playing artwork, the only picture an audio
-                  app can put on the car's screen
+    LockScreenLyrics/ the line being sung in the system's now playing, checked ten times a second: in place of
+                  the artist, as the artwork (the line and the next over the cover blurred), both, or under the
+                  cover (the cover as it is, a shade rising from its foot and the line on it in white with a black
+                  outline, in SpotifyMixUI-Bold, which the app font's hooks swap for the family picked). The artwork
+                  is drawn only when the line changes; the cover is fetched from Spotify's artwork off the main
+                  thread. The visualizer draws nowhere outside the app: no lock screen, CarPlay, Live Activity or
+                  widget bars
     LockScreenArtwork/ the track's Canvas or its album's Apple Music cover as the lock screen's animated
                   artwork, from iOS 26 (Apple takes an MPMediaItemAnimatedArtwork under one of
                   MPNowPlayingInfoCenter's animated artwork keys, and the mod puts one there through a second
@@ -285,9 +281,7 @@ Shared:
                   own in the background, so out of the app iOS's is the only one there is
     LiveActivity/ a Live Activity on the lock screen and in the Dynamic Island in one of four views, the line being
                   sung with the next one under it, the tracks up next (a tap on one skipping ahead to it), the player (the
-                  cover in a ring of the visualizer's bars, mirrored, each bar in the cover's colours from the inside out,
-                  read once, twice or four times a second while Spotify is not in front and the song plays and sent as a
-                  hex digit a band, the widget gliding them to their new lengths; the cover a file in the app's first App
+                  cover, without bars, the visualizer being the app's alone; the cover a file in the app's first App
                   Group, read by the widget when it may open the group, and a 40 px picture in the state otherwise, left
                   out when the state would pass ActivityKit's 4 KB; previous, play and pause, next and like; a bar with the
                   time in and left, cut into 24 buttons that seek to where they are, which iOS's own controls cannot be
@@ -300,12 +294,11 @@ Shared:
                   in front; its switch and its view apply at once
     HomeWidgets/  home screen and lock screen widgets (iOS 17+, Mod Settings > Widgets), in the look of Spotify's own:
                   Now Playing (small, medium, large with three tracks up next, and the lock screen's rectangle and a
-                  circle that plays and pauses), Visualizer (the cover in a ring of 32 bars in its colours) and Lyrics
-                  (the line being sung). HomeWidgets.x writes state.json and the cover into the app's first App Group
+                  circle that plays and pauses) and Lyrics (the line being sung); no
+                  Visualizer, the visualizer being the app's alone. HomeWidgets.x writes state.json and the cover into the app's first App Group
                   on every player report and, while a widget is placed (WidgetCenter's configurations, asked every 30 s
                   and on going to and from the background), each second for a like or a seek and every 1, 2 or 5 s for
-                  the bars (a fourth listener of the visualizer's tap, only while Spotify is away and playing) and the
-                  line; it asks WidgetKit to draw again only the kinds whose part changed. The widgets are
+                  the line; it asks WidgetKit to draw again only the kinds whose part changed. The widgets are
                   extension/LiveActivity/HomeWidgets.swift, in the Live Activity's extension, which reads the newest
                   state.json in the App Groups it is signed with. Taps are SGWidgetActionIntent, an AudioPlaybackIntent
                   (LiveActivityShared.swift) iOS runs inside Spotify, waking it when needed, posting the Live
