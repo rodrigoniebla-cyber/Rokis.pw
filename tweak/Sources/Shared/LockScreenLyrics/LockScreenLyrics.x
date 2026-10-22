@@ -297,26 +297,6 @@ static void tick(void) {
     sg_resending = NO;
 }
 
-// Sends Spotify's info again as it should show now, whether or not the line moved.
-static void resend(void) {
-    NSDictionary *info;
-    CFAbsoluteTime reportedAt;
-    @synchronized (sg_lock) {
-        info = sg_spotifyInfo;
-        reportedAt = sg_spotifyInfoAt;
-    }
-    if (!info) return;
-    double elapsed = info[MPNowPlayingInfoPropertyElapsedPlaybackTime] ? elapsedAt(info, reportedAt, CFAbsoluteTimeGetCurrent()) : 0;
-    NSString *full, *next;
-    NSString *line = info[MPNowPlayingInfoPropertyElapsedPlaybackTime] ? lineFor(info, elapsed, &full, &next) : nil;
-    sg_shownLine = [NSString stringWithFormat:@"%@\n%@\n%@", line ?: @"", lineInArtwork() ? full ?: @"" : @"", lineInArtwork() && sg_place != SGLockScreenLyricsCover ? next ?: @"" : @""];
-    NSMutableDictionary *shown = [withLine(info, line, full, next, elapsed) mutableCopy];
-    if (!info[MPNowPlayingInfoPropertyElapsedPlaybackTime]) [shown removeObjectForKey:MPNowPlayingInfoPropertyElapsedPlaybackTime];
-    sg_resending = YES;
-    MPNowPlayingInfoCenter.defaultCenter.nowPlayingInfo = shown;
-    sg_resending = NO;
-}
-
 // Main thread, as everything the timer touches is.
 static void setTicking(BOOL on) {
     if (!sg_lyricsOn) on = NO;
