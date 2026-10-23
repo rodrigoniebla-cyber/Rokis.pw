@@ -22,6 +22,11 @@ FLEX_DEB="$ROOT/vendor/com.hopeless.autoflex_0.0.1_iphoneos-arm.deb"
 # exist and nothing opens. Set BUNDLE_ID only if you know it matches your App ID; scripts/install.sh
 # reads that App ID out of the profile and can do it safely.
 BUNDLE_ID="${BUNDLE_ID:-}"
+# Spotify's Apple Watch app is dropped unless KEEP_WATCH=1: its WKCompanionAppBundleIdentifier names
+# com.spotify.client, and a signer that cannot install watch apps refuses the whole IPA. With a developer
+# certificate that covers both bundle ids (com.spotify.client and com.spotify.client.watchkitapp, or a
+# wildcard) it installs. BUNDLE_ID does not reach the watch app's ids, so leave it unset with the watch app kept.
+KEEP_WATCH="${KEEP_WATCH:-0}"
 mkdir -p "$ROOT/out"
 
 IN="" OUT="" WITH_FLEX=1 INSTALL=0 NAME="" ICON=""
@@ -127,12 +132,13 @@ xcrun --sdk iphoneos clang -target arm64-apple-ios16.0 -dynamiclib -fobjc-arc -O
 FILES+=("$GROUPS_DYLIB")
 
 echo "==> injecting"
+[ "$KEEP_WATCH" = 1 ] && echo "    keeping Spotify's Apple Watch app"
 # -w drops the Watch app: its companion-app key would still name com.spotify.client and block the install.
 unzip -p "$IN" "${APP_DIR}Info.plist" > "$ROOT/out/.info.plist"
 python3 "$ROOT/scripts/merge-local-network-plist.py" "$ROOT/out/.info.plist" \
   "$ROOT/plist/liquid-glass.plist" "$ROOT/out/.injection.plist"
 rm -f "$ROOT/out/.info.plist"
-cyan -i "$IN" -o "$OUT" -f "${FILES[@]}" -l "$ROOT/out/.injection.plist" ${BUNDLE_ID:+-b "$BUNDLE_ID"} ${NAME:+-n "$NAME"} ${ICON:+-k "$ICON"} -w -s --overwrite
+cyan -i "$IN" -o "$OUT" -f "${FILES[@]}" -l "$ROOT/out/.injection.plist" ${BUNDLE_ID:+-b "$BUNDLE_ID"} ${NAME:+-n "$NAME"} ${ICON:+-k "$ICON"} $([ "$KEEP_WATCH" = 1 ] || echo -w) -s --overwrite
 rm -f "$ROOT/out/.injection.plist"
 
 # Siri's requests are answered by Spotify's Intents extension, not by the app, and it finds the signed

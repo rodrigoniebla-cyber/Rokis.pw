@@ -18,6 +18,11 @@ on:
         required: false
         default: ""
         type: string
+      keep_watch:
+        description: "Keep Spotify's Apple Watch app in the IPA. Off by default: it installs only when the signer supports watch apps (a developer certificate does; TrollStore and AltStore do not)"
+        required: false
+        default: false
+        type: boolean
       upload_method:
         description: "Where to put the result"
         default: artifacts
@@ -81,6 +86,7 @@ jobs:
       - run: make release
         env:
           SG_DISABLE: ${{ inputs.disable }}
+          KEEP_WATCH: ${{ inputs.keep_watch && '1' || '0' }}
 
       - uses: actions/upload-artifact@v5
         if: inputs.upload_method != 'filebin'
