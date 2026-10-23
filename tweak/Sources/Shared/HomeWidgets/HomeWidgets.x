@@ -236,6 +236,7 @@ static void update(BOOL force) {
     refreshCover(trackID);
     BOOL paused = state.isPaused || !state.isPlaying;
     double duration = [state respondsToSelector:@selector(duration)] ? state.duration : 0;
+    if (!isfinite(duration) || duration < 0) duration = 0;
     NSInteger ms = SGKaraokePositionMs();
     double position = MAX(0, ms / 1000.0);
     NSTimeInterval now = NSDate.date.timeIntervalSince1970;
@@ -252,7 +253,7 @@ static void update(BOOL force) {
     for (NSDictionary *upcoming in upNext) [upNextText addObject:upcoming[@"uri"]];
     NSString *common = [@[trackID ?: @"", track.trackTitle, track.artistName ?: @"", paused ? @"1" : @"0", @(anchor).stringValue,
                           liked ? @"1" : @"0", options.shufflingContext ? @"1" : @"0", @(repeatMode).stringValue,
-                          cover ?: @"", @(sg_tint).stringValue, [sg_colours componentsJoinedByString:@","],
+                          cover ?: @"", @(sg_tint).stringValue, [sg_colours componentsJoinedByString:@","] ?: @"",
                           @(background).stringValue, [upNextText componentsJoinedByString:@","]]
                         componentsJoinedByString:@"\n"];
 
@@ -279,6 +280,11 @@ static void update(BOOL force) {
         @"duration": @(duration), @"position": @(position), @"cover": cover ?: @"", @"tint": @(sg_tint), @"colours": sg_colours ?: @[],
         @"line": line, @"next": next, @"upNext": upNext, @"background": @(background),
     };
+    // A value JSON cannot hold (a length Spotify reports as NaN) would throw rather than fail: it is left out.
+    if (![NSJSONSerialization isValidJSONObject:written]) {
+        SGLog(@"widgets: the state could not be written as JSON");
+        return;
+    }
     NSData *data = [NSJSONSerialization dataWithJSONObject:written options:0 error:nil];
     if (![data writeToURL:[folder URLByAppendingPathComponent:@"state.json"] options:NSDataWritingAtomic error:nil]) return;
     [SGHomeWidgetsBridge reload:kinds];
@@ -329,6 +335,8 @@ void SGHomeWidgetsRefresh(void) { update(YES); }
 %ctor {
     if (@available(iOS 17.0, *)) {
         if (SGOff("homewidgets")) return;
+        sg_colours = @[];
+        sg_placed = @[];
         static SGHomeWidgetsObserver *observer;
         observer = [SGHomeWidgetsObserver new];
         dispatch_async(dispatch_get_main_queue(), ^{
